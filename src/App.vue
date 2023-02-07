@@ -1,15 +1,28 @@
 <template>
   <div class="app">
     <h1>Страница с постами</h1>
-    <div class="app_buttons">
+    <MyInput v-model="searchValue" @input="updateInput" placeholder="Найти пост"></MyInput>
+    <div class="app__buttons">
       <MyButton @click="showPopup">Создать пост</MyButton>
       <MySelector v-model="selectedSort" :options="sortOptions"></MySelector>
     </div>
     <MyPopup v-model:show="popupVisible">
       <PostForm @create="createPost" />
     </MyPopup>
-    <PostList v-if="!isPostLoading" :posts="sortedPosts" @remove="removePost" />
+    <PostList v-if="!isPostLoading" :posts="sortedSearchedPosts" @remove="removePost" />
     <h2 v-else>Идет загрузка постов, пожалуйста подождите</h2>
+    <div class="app__obsetver" ref="observer"></div>
+    <!--     <div class="page__wrapper">
+      <div
+        v-for="pageNumber in totalPages"
+        :key="pageNumber"
+        class="page__value"
+        :class="{ 'current-page': page === pageNumber }"
+        @click="changePage(pageNumber)"
+      >
+        {{ pageNumber }}
+      </div>
+    </div> -->
   </div>
 </template>
 
@@ -30,6 +43,10 @@ export default {
       popupVisible: false,
       isPostLoading: true,
       selectedSort: '',
+      searchValue: '',
+      page: 1,
+      limit: 10,
+      totalPages: 0,
       sortOptions: [
         { value: 'title', name: 'По названию' },
         { value: 'body', name: 'По содержимому' },
@@ -47,9 +64,19 @@ export default {
     showPopup() {
       this.popupVisible = true;
     },
+    /*     changePage(pageNumber) {
+      this.page = pageNumber;
+    }, */
     async fetchPosts() {
       try {
-        const response = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=10');
+        this.isPostLoading = true;
+        const response = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=10', {
+          params: {
+            _page: this.page,
+            _limit: this.limit,
+          },
+        });
+        this.totalPages = Math.ceil(response.headers['x-total-count'] / this.limit);
         this.posts = response.data;
       } catch (e) {
         alert('При запросе к серверу произошла ошибка');
@@ -57,9 +84,35 @@ export default {
         this.isPostLoading = false;
       }
     },
+    async loadMorePosts() {
+      try {
+        this.page += 1;
+        const response = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=10', {
+          params: {
+            _page: this.page,
+            _limit: this.limit,
+          },
+        });
+        this.totalPages = Math.ceil(response.headers['x-total-count'] / this.limit);
+        this.posts = [...this.posts, ...response.data];
+      } catch (e) {
+        alert('При запросе к серверу произошла ошибка');
+      }
+    },
   },
   mounted() {
     this.fetchPosts();
+    const options = {
+      rootMargin: '0px',
+      threshold: 1.0,
+    };
+    const callback = (entries, observer) => {
+      if (entries[0].isIntersecting && this.page < this.totalPages) {
+        this.loadMorePosts();
+      }
+    };
+    const observer = new IntersectionObserver(callback, options);
+    observer.observe(this.$refs.observer);
   },
   computed: {
     sortedPosts() {
@@ -67,14 +120,17 @@ export default {
         post1[this.selectedSort]?.localeCompare(post2[this.selectedSort]),
       );
     },
-  },
-  /*   watch: {
-    selectedSort(newValue) {
-      this.posts.sort((post1, post2) => {
-        return post1[newValue]?.localeCompare(post2[newValue]);
-      });
+    sortedSearchedPosts() {
+      return this.sortedPosts.filter((post) =>
+        post.title.toLowerCase().includes(this.searchValue.toLowerCase()),
+      );
     },
-  }, */
+  },
+  watch: {
+    /* page() {
+      this.fetchPosts();
+    }, */
+  },
 };
 </script>
 
@@ -87,8 +143,24 @@ export default {
 .app {
   padding: 20px;
 }
-.app_buttons {
+.app__buttons {
   display: flex;
   justify-content: space-between;
 }
+.app__observer {
+  height: 30px;
+  background: green;
+}
+/* .page__wrapper {
+  display: flex;
+  justify-content: center;
+}
+.page__value {
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.315);
+  padding: 5px 10px;
+}
+.current-page {
+  border: 1.5px solid black;
+} */
 </style>

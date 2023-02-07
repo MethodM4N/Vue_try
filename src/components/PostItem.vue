@@ -30,4 +30,7 @@ export default {
   align-items: center;
   justify-content: space-between;
 }
+.post:last-of-type {
+  margin-bottom: 25px;
+}
 </style>
