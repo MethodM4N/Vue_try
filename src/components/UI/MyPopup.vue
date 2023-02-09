@@ -7,19 +7,11 @@
 </template>
 
 <script>
+import toggleMixin from '@/mixins/toggleMixin';
+
 export default {
   name: 'MyPopup',
-  props: {
-    show: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  methods: {
-    hidePopup() {
-      this.$emit('update:show', false);
-    },
-  },
+  mixins: [toggleMixin],
 };
 </script>
 
@@ -35,7 +27,7 @@ export default {
 }
 .popup__content {
   margin: auto;
-  padding: 5px 40px;
+  padding: 20px 20px;
   background: white;
   border-radius: 12px;
   min-height: 50px;
